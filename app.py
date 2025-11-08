@@ -90,6 +90,50 @@ class IrrigationApp:
         except (ValueError, AttributeError):
             return None
     
+    def _calculate_and_save_etc_for_dates(self, dates: List[str]):
+        """
+        Calculate and save ETc values for all fields and specified dates.
+        
+        Args:
+            dates: List of date strings in ISO 8601 format (YYYY-MM-DD)
+            
+        Returns:
+            Tuple of (success: bool, etc_results: dict, valid_fields: List[Field], weather_data: List[WeatherData])
+            Returns (False, None, None, None) on failure
+        """
+        try:
+            # Get fields from database
+            fields = database.get_all_fields(self.db_path)
+            if not fields:
+                return (False, None, None, None)
+            
+            # Get weather data for specified dates
+            weather_data = database.get_weather_data_by_dates(self.db_path, dates)
+            
+            # Check if we have weather data for all dates
+            if len(weather_data) == 0:
+                return (False, None, None, None)
+            
+            # Filter out fields with invalid crop factors
+            valid_fields = [
+                field for field in fields 
+                if field.crop_factor is not None and field.crop_factor >= 0
+            ]
+            
+            if not valid_fields:
+                return (False, None, None, None)
+            
+            # Calculate ETc for all valid fields
+            etc_results = calculate_etc_for_all_fields(valid_fields, weather_data)
+            
+            # Save ETc calculations to database
+            database.save_etc_calculations_batch(self.db_path, etc_results, weather_data)
+            
+            return (True, etc_results, valid_fields, weather_data)
+        except Exception:
+            # Silently handle errors - don't interrupt user flow
+            return (False, None, None, None)
+    
     def input_weather_data(self):
         """Prompt user to enter ET0 values for the next three dates."""
         dates = self.get_next_three_dates()
@@ -114,6 +158,14 @@ class IrrigationApp:
                 except ValueError as e:
                     print(f"Error: {e}")
                     continue
+        
+        # Calculate and save ETc values immediately after entering ET0 values
+        success, _, _, _ = self._calculate_and_save_etc_for_dates(dates)
+        if success:
+            print("\nETc values have been calculated and saved.")
+        else:
+            # Silently fail - calculation will happen when viewing table if needed
+            pass
     
     def display_main_menu(self):
         """Display the main menu options."""
@@ -296,21 +348,21 @@ class IrrigationApp:
                 print(f"Error: Crop factor for '{field_name}' is invalid. Please enter a float value.")
             return
         
-        # Calculate ETc
+        # Calculate and save ETc using helper method
+        success, etc_results, valid_fields, weather_data = self._calculate_and_save_etc_for_dates(dates)
+        if not success:
+            print("Error: Could not calculate ETc values.")
+            return
+        
+        # Display table using results from helper method
         try:
-            etc_results = calculate_etc_for_all_fields(fields, weather_data)
-            
-            # Save ETc calculations to database
-            database.save_etc_calculations_batch(self.db_path, etc_results, weather_data)
-            
-            # Display table
             print("\n=== ETc Table ===")
             print("\nDate format: ISO 8601 (YYYY-MM-DD)")
             print()
-            table = format_etc_table(fields, weather_data, etc_results)
+            table = format_etc_table(valid_fields, weather_data, etc_results)
             print(table)
         except Exception as e:
-            print(f"Error calculating ETc: {e}")
+            print(f"Error displaying ETc table: {e}")
     
     def run(self):
         """Run the main application loop."""

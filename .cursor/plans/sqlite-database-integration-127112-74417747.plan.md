@@ -1,4 +1,4 @@
-<!-- 74417747-2c2f-4e3f-9e6b-93b5b68058a8 2346839c-e22a-422d-874c-0aecc14f4f84 -->
+<!-- 74417747-2c2f-4e3f-9e6b-93b5b68058a8 1ecb1d6a-4676-4be0-a243-f4817768ce77 -->
 # Database Backend Implementation Plan
 
 ## Overview
@@ -72,11 +72,3 @@ Implement SQLite database persistence to store field information, weather data (
 - `models.py` - Keep as-is
 - `calculator.py` - Keep as-is
 - `formatter.py` - Keep as-is
-
-### To-dos
-
-- [ ] Create database.py module with database initialization, connection management, and CRUD operations for fields, weather_data, and etc_calculations tables
-- [ ] Update IrrigationApp.__init__() to initialize database and remove default fields initialization
-- [ ] Replace in-memory field operations in app.py with database calls (add_field, edit_field, delete_field, display_fields)
-- [ ] Replace in-memory weather data operations in app.py with database calls (input_weather_data, view_etc_table)
-- [ ] Add functionality to save ETc calculations to database when viewing ETc table

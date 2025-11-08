@@ -8,6 +8,7 @@ from typing import List, Optional
 from models import Field, WeatherData
 from calculator import calculate_etc_for_all_fields
 from formatter import format_etc_table
+import database
 
 
 class IrrigationApp:
@@ -15,20 +16,11 @@ class IrrigationApp:
     Main application class for managing irrigation scheduling.
     """
     
-    def __init__(self):
-        """Initialize the application with default fields."""
-        self.fields: List[Field] = []
-        self.weather_data: List[WeatherData] = []
-        self._initialize_default_fields()
-    
-    def _initialize_default_fields(self):
-        """Pre-populate default fields."""
-        default_fields = [
-            Field(field_name="DF1B", crop_factor=0.0, fertilizer_week=1),
-            Field(field_name="SS2B", crop_factor=0.0, fertilizer_week=1),
-            Field(field_name="MF8B", crop_factor=0.0, fertilizer_week=1),
-        ]
-        self.fields = default_fields
+    def __init__(self, db_path: str = "irrigation.db"):
+        """Initialize the application with database."""
+        self.db_path = db_path
+        database.init_database(self.db_path)
+        database.initialize_default_fields(self.db_path)
     
     def get_next_three_dates(self) -> List[str]:
         """
@@ -101,7 +93,6 @@ class IrrigationApp:
     def input_weather_data(self):
         """Prompt user to enter ET0 values for the next three dates."""
         dates = self.get_next_three_dates()
-        self.weather_data = []
         
         print("\n=== Enter Weather Data ===")
         print("Please enter ET0 (reference evapotranspiration) values for each date.")
@@ -118,8 +109,7 @@ class IrrigationApp:
                         print(f"Error: Invalid ET0 value for {date}. Please enter a non-negative number.")
                         continue
                     
-                    weather_data = WeatherData(date=date, et0=et0_value)
-                    self.weather_data.append(weather_data)
+                    database.save_weather_data(self.db_path, date, et0_value)
                     break
                 except ValueError as e:
                     print(f"Error: {e}")
@@ -142,14 +132,15 @@ class IrrigationApp:
     
     def display_fields(self):
         """Display all fields in a formatted table."""
-        if not self.fields:
+        fields = database.get_all_fields(self.db_path)
+        if not fields:
             print("\nError: No fields provided. Please enter at least one field.")
             return
         
         print("\n=== Fields ===")
         print(f"{'Field Name':<15} {'Crop Factor':<15} {'Fertilizer Week':<15}")
         print("-" * 50)
-        for field in sorted(self.fields, key=lambda f: f.field_name):
+        for field in sorted(fields, key=lambda f: f.field_name):
             print(f"{field.field_name:<15} {field.crop_factor:<15.2f} {field.fertilizer_week:<15}")
     
     def add_field(self):
@@ -164,7 +155,7 @@ class IrrigationApp:
                 continue
             
             # Check for duplicate
-            if any(f.field_name == field_name for f in self.fields):
+            if database.field_exists(self.db_path, field_name):
                 print(f"Error: Field '{field_name}' already exists.")
                 continue
             
@@ -189,19 +180,15 @@ class IrrigationApp:
             break
         
         try:
-            new_field = Field(
-                field_name=field_name,
-                crop_factor=crop_factor,
-                fertilizer_week=fertilizer_week
-            )
-            self.fields.append(new_field)
+            database.create_field(self.db_path, field_name, crop_factor, fertilizer_week)
             print(f"\nSuccessfully added field '{field_name}'.")
-        except ValueError as e:
+        except Exception as e:
             print(f"Error: {e}")
     
     def edit_field(self):
         """Prompt user to edit an existing field."""
-        if not self.fields:
+        fields = database.get_all_fields(self.db_path)
+        if not fields:
             print("\nError: No fields available to edit.")
             return
         
@@ -209,7 +196,7 @@ class IrrigationApp:
         self.display_fields()
         
         field_name = input("\nEnter field name to edit: ").strip()
-        field = next((f for f in self.fields if f.field_name == field_name), None)
+        field = database.get_field(self.db_path, field_name)
         
         if not field:
             print(f"Error: Field '{field_name}' not found.")
@@ -244,15 +231,15 @@ class IrrigationApp:
             break
         
         try:
-            field.crop_factor = new_crop_factor
-            field.fertilizer_week = new_fertilizer_week
+            database.update_field(self.db_path, field_name, new_crop_factor, new_fertilizer_week)
             print(f"\nSuccessfully updated field '{field_name}'.")
-        except ValueError as e:
+        except Exception as e:
             print(f"Error: {e}")
     
     def delete_field(self):
         """Prompt user to delete a field."""
-        if not self.fields:
+        fields = database.get_all_fields(self.db_path)
+        if not fields:
             print("\nError: No fields available to delete.")
             return
         
@@ -260,31 +247,37 @@ class IrrigationApp:
         self.display_fields()
         
         field_name = input("\nEnter field name to delete: ").strip()
-        field = next((f for f in self.fields if f.field_name == field_name), None)
         
-        if not field:
+        if not database.field_exists(self.db_path, field_name):
             print(f"Error: Field '{field_name}' not found.")
             return
         
         confirm = input(f"Are you sure you want to delete '{field_name}'? (yes/no): ").strip().lower()
         if confirm == 'yes':
-            self.fields.remove(field)
-            print(f"\nSuccessfully deleted field '{field_name}'.")
+            try:
+                database.delete_field(self.db_path, field_name)
+                print(f"\nSuccessfully deleted field '{field_name}'.")
+            except Exception as e:
+                print(f"Error: {e}")
         else:
             print("Deletion cancelled.")
     
     def view_etc_table(self):
         """Calculate and display ETc table."""
-        # Validate fields
-        if not self.fields:
+        # Get fields from database
+        fields = database.get_all_fields(self.db_path)
+        if not fields:
             print("\nError: No fields provided. Please enter at least one field.")
             return
         
-        # Validate weather data
+        # Get weather data for next three dates
         dates = self.get_next_three_dates()
+        weather_data = database.get_weather_data_by_dates(self.db_path, dates)
+        
+        # Check for missing dates
         missing_dates = []
         for date in dates:
-            if not any(wd.date == date for wd in self.weather_data):
+            if not any(wd.date == date for wd in weather_data):
                 missing_dates.append(date)
         
         if missing_dates:
@@ -294,7 +287,7 @@ class IrrigationApp:
         
         # Validate crop factors
         invalid_fields = []
-        for field in self.fields:
+        for field in fields:
             if field.crop_factor is None or field.crop_factor < 0:
                 invalid_fields.append(field.field_name)
         
@@ -305,13 +298,16 @@ class IrrigationApp:
         
         # Calculate ETc
         try:
-            etc_results = calculate_etc_for_all_fields(self.fields, self.weather_data)
+            etc_results = calculate_etc_for_all_fields(fields, weather_data)
+            
+            # Save ETc calculations to database
+            database.save_etc_calculations_batch(self.db_path, etc_results, weather_data)
             
             # Display table
             print("\n=== ETc Table ===")
             print("\nDate format: ISO 8601 (YYYY-MM-DD)")
             print()
-            table = format_etc_table(self.fields, self.weather_data, etc_results)
+            table = format_etc_table(fields, weather_data, etc_results)
             print(table)
         except Exception as e:
             print(f"Error calculating ETc: {e}")

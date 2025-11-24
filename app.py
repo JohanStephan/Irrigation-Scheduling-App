@@ -111,7 +111,12 @@ class IrrigationApp:
             weather_data = database.get_weather_data_by_dates(self.db_path, dates)
             
             # Check if we have weather data for all dates
-            if len(weather_data) == 0:
+            if len(weather_data) != len(dates):
+                return (False, None, None, None)
+            
+            # Verify that all requested dates are present in weather_data
+            weather_dates = {wd.date for wd in weather_data}
+            if weather_dates != set(dates):
                 return (False, None, None, None)
             
             # Filter out fields with invalid crop factors

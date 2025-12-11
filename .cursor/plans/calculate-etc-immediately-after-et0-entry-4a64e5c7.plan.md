@@ -1,4 +1,18 @@
-<!-- 4a64e5c7-eab2-48ca-bc16-9deed7d9a3d7 84513d40-4647-4753-a9b7-4c5e69ab783f -->
+---
+name: Calculate ETc Immediately After ET0 Entry
+overview: ""
+todos:
+  - id: fb99ee62-a28f-4734-a594-ad7a42540ce2
+    content: Create _calculate_and_save_etc_for_dates() helper method in IrrigationApp class to handle ETc calculation and database saving
+    status: pending
+  - id: 072e2a12-1564-41f0-9b79-ff171eaa3c46
+    content: Modify input_weather_data() to call the helper method after all three ET0 values are saved
+    status: pending
+  - id: 3c694085-7c8f-4bb7-afb5-f098ead74626
+    content: Refactor view_etc_table() to use the new helper method, keeping display logic separate
+    status: pending
+---
+
 # Calculate ETc Immediately After ET0 Entry
 
 ## Current Behavior
@@ -42,9 +56,3 @@ Refactor `view_etc_table()` to use the new helper method for calculation, keepin
 - Invalid fields (missing/invalid crop factors) should be skipped silently during calculation
 - Error handling should not block the user from continuing after entering ET0 values
 - ETc calculations will be saved to the database immediately, making them available even if the user doesn't view the table
-
-### To-dos
-
-- [ ] Create _calculate_and_save_etc_for_dates() helper method in IrrigationApp class to handle ETc calculation and database saving
-- [ ] Modify input_weather_data() to call the helper method after all three ET0 values are saved
-- [ ] Refactor view_etc_table() to use the new helper method, keeping display logic separate

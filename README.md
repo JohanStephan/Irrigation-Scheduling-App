@@ -1,6 +1,6 @@
 # Irrigation Scheduling Application
 
-A Python application for scheduling irrigation by calculating ETc (Evapotranspiration Crop) values based on ET0 (reference evapotranspiration) and crop factors.
+A Python application for scheduling irrigation.
 
 ## Features
 

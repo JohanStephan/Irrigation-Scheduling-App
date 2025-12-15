@@ -101,4 +101,3 @@ The application validates all inputs and provides clear error messages:
 
 - Fields are sorted alphabetically in the ETc table
 - The application automatically calculates the next three dates starting from tomorrow
-

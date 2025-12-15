@@ -58,4 +58,3 @@ def format_etc_table(
         lines.append(row)
     
     return "\n".join(lines)
-

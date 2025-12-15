@@ -451,4 +451,3 @@ def get_etc_history(db_path: str, field_name: Optional[str] = None, date: Option
         ]
     finally:
         conn.close()
-

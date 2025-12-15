@@ -51,4 +51,3 @@ class WeatherData:
             raise ValueError("date must be in ISO 8601 format (YYYY-MM-DD)")
         if not isinstance(self.et0, (int, float)) or self.et0 < 0:
             raise ValueError("et0 must be a non-negative number")
-

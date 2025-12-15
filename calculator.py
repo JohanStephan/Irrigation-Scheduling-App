@@ -45,4 +45,3 @@ def calculate_etc_for_all_fields(
             results[field.field_name][weather_data.date] = etc_value
     
     return results
-

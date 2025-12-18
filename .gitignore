@@ -1,5 +1,5 @@
 # SQLite database file
-irrigation.db
+irrigation.dbgit rm --cached irrigation.db
 
 # Python cache
 __pycache__/

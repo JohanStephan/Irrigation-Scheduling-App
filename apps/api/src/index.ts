@@ -305,21 +305,6 @@ app.get('/api/weather', (req, res) => {
   res.json(rows);
 });
 
-app.put('/api/weather/:date', (req, res) => {
-  const date = String(req.params.date);
-  if (!ISO_DATE_RE.test(date)) {
-    return res.status(400).json({ message: 'Invalid date format.', details: { code: 'INVALID_DATE', date } });
-  }
-
-  const parsed = PutWeatherSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ message: 'Invalid weather input.', details: parsed.error.flatten() });
-  }
-
-  db.prepare('INSERT OR REPLACE INTO weather_data (date, et0) VALUES (?, ?)').run(date, parsed.data.et0);
-  res.json({ ok: true });
-});
-
 app.put('/api/weather/batch', (req, res) => {
   const parsed = BatchWeatherSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -334,6 +319,21 @@ app.put('/api/weather/batch', (req, res) => {
   });
   txn();
 
+  res.json({ ok: true });
+});
+
+app.put('/api/weather/:date', (req, res) => {
+  const date = String(req.params.date);
+  if (!ISO_DATE_RE.test(date)) {
+    return res.status(400).json({ message: 'Invalid date format.', details: { code: 'INVALID_DATE', date } });
+  }
+
+  const parsed = PutWeatherSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Invalid weather input.', details: parsed.error.flatten() });
+  }
+
+  db.prepare('INSERT OR REPLACE INTO weather_data (date, et0) VALUES (?, ?)').run(date, parsed.data.et0);
   res.json({ ok: true });
 });
 
